@@ -1,5 +1,12 @@
 'use strict';
 
+// --- Firebase ---
+var db = null;
+if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+}
+
 // --- State ---
 var categories = [];        // [{name, totalMs}]
 var currentIndex = -1;      // index in categories[] of the active category
@@ -13,6 +20,36 @@ var categorySelect = document.getElementById('category-select');
 var statusMsg     = document.getElementById('status-msg');
 var tableBody     = document.getElementById('table-body');
 var emptyMsg      = document.getElementById('empty-msg');
+
+// --- Persistence ---
+
+function saveCategories() {
+  if (db) {
+    db.ref('categories').set(categories.length ? categories : null); // null removes the node when empty
+  }
+}
+
+function loadFromFirebase() {
+  if (!db) {
+    renderTable();
+    return;
+  }
+  db.ref('categories').once('value', function(snapshot) {
+    var data = snapshot.val();
+    if (data) {
+      categories = Array.isArray(data)
+        ? data
+        : Object.keys(data).sort(function(a, b) { return a - b; }).map(function(k) { return data[k]; });
+      categories.forEach(function(cat, idx) {
+        var option = document.createElement('option');
+        option.value = String(idx);
+        option.textContent = cat.name;
+        categorySelect.appendChild(option);
+      });
+    }
+    renderTable();
+  });
+}
 
 // --- Helpers ---
 
@@ -95,6 +132,7 @@ function onAddCategory() {
 
   categoryInput.value = '';
   updateStatus('Category "' + name + '" added.');
+  saveCategories();
   renderTable();
 }
 
@@ -114,11 +152,21 @@ function onSelectCategory() {
   segmentStart = now;
 
   updateStatus('Timing: ' + categories[currentIndex].name);
+  saveCategories();
   renderTable();
 
   // Start live-update ticker if not already running
   if (!tickInterval) {
     tickInterval = setInterval(renderTable, 1000);
+    // Periodically save the in-progress segment so progress is not lost on sudden close
+    setInterval(function() {
+      if (currentIndex !== -1 && segmentStart !== null) {
+        var now = Date.now();
+        categories[currentIndex].totalMs += now - segmentStart;
+        segmentStart = now;
+        saveCategories();
+      }
+    }, 30000);
   }
 }
 
@@ -132,5 +180,15 @@ categoryInput.addEventListener('keydown', function(e) {
 
 categorySelect.addEventListener('change', onSelectCategory);
 
-// Initial render
-renderTable();
+// Save current segment progress before page unloads
+window.addEventListener('beforeunload', function() {
+  if (currentIndex !== -1 && segmentStart !== null) {
+    var now = Date.now();
+    categories[currentIndex].totalMs += now - segmentStart;
+    segmentStart = now;
+    saveCategories();
+  }
+});
+
+// Initial render — load persisted data from Firebase
+loadFromFirebase();
