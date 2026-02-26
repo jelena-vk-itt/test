@@ -1,23 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Time Logger</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
 
   <h1>Time Logger</h1>
-
-  <!-- Add category -->
-  <div class="section">
-    <h2>Add Category</h2>
-    <div class="add-category-row">
-      <input type="text" id="category-input" placeholder="Category name" autocomplete="off" />
-      <button id="add-btn">Add</button>
-    </div>
-  </div>
 
   <!-- Select active category -->
   <div class="section">
@@ -28,6 +21,15 @@
       </select>
     </div>
     <p id="status-msg"></p>
+  </div>
+
+  <!-- Add category -->
+  <div class="section">
+    <h2>Add Category</h2>
+    <div class="add-category-row">
+      <input type="text" id="category-input" placeholder="Category name" autocomplete="off" />
+      <button id="add-btn">Add</button>
+    </div>
   </div>
 
   <!-- Time summary table -->
@@ -46,8 +48,9 @@
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
+
 </html>
