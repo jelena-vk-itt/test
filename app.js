@@ -4,7 +4,7 @@
 var db = null;
 if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
   firebase.initializeApp(firebaseConfig);
-  db = firebase.database();
+  db = firebase.firestore();
 }
 
 // --- State ---
@@ -15,17 +15,25 @@ var tickInterval = null;    // setInterval handle for live updates
 
 // --- DOM refs ---
 var categoryInput = document.getElementById('category-input');
-var addBtn        = document.getElementById('add-btn');
+var addBtn = document.getElementById('add-btn');
 var categorySelect = document.getElementById('category-select');
-var statusMsg     = document.getElementById('status-msg');
-var tableBody     = document.getElementById('table-body');
-var emptyMsg      = document.getElementById('empty-msg');
+var statusMsg = document.getElementById('status-msg');
+var tableBody = document.getElementById('table-body');
+var emptyMsg = document.getElementById('empty-msg');
 
 // --- Persistence ---
 
 function saveCategories() {
   if (db) {
-    db.ref('categories').set(categories.length ? categories : null); // null removes the node when empty
+    db.collection('categories').doc('data').set({
+      items: categories,
+      currentIndex: currentIndex,
+      segmentStart: segmentStart
+    })
+      .catch(function (error) {
+        console.error('Firebase save error:', error);
+        updateStatus('Error saving to Firebase: ' + error.message);
+      });
   }
 }
 
@@ -34,28 +42,70 @@ function loadFromFirebase() {
     renderTable();
     return;
   }
-  db.ref('categories').once('value', function(snapshot) {
-    var data = snapshot.val();
-    if (data) {
-      categories = Array.isArray(data)
-        ? data
-        : Object.keys(data).sort(function(a, b) { return a - b; }).map(function(k) { return data[k]; });
-      categories.forEach(function(cat, idx) {
-        var option = document.createElement('option');
-        option.value = String(idx);
-        option.textContent = cat.name;
-        categorySelect.appendChild(option);
-      });
-    }
-    renderTable();
-  });
+  db.collection('categories').doc('data').get()
+    .then(function (doc) {
+      if (doc.exists) {
+        var data = doc.data();
+        if (data && data.items) {
+          // Clear any existing options (keep the placeholder) before repopulating.
+          while (categorySelect.options.length > 1) {
+            categorySelect.remove(1);
+          }
+          categories = data.items;
+
+          // Restore the active tracking state
+          var savedIndex = data.currentIndex;
+          var savedStart = data.segmentStart;
+
+          // If there was an active category, calculate elapsed time since last save
+          if (savedIndex !== null && savedIndex !== undefined && savedIndex !== -1 && savedStart) {
+            var now = Date.now();
+            var elapsed = now - savedStart;
+            categories[savedIndex].totalMs += elapsed;
+
+            // Resume tracking from now
+            currentIndex = savedIndex;
+            segmentStart = now;
+            categorySelect.value = String(savedIndex);
+            updateStatus('Resumed timing: ' + categories[currentIndex].name);
+
+            // Start live-update ticker
+            if (!tickInterval) {
+              tickInterval = setInterval(renderTable, 1000);
+              // Periodically save the in-progress segment
+              setInterval(function () {
+                if (currentIndex !== -1 && segmentStart !== null) {
+                  var now = Date.now();
+                  categories[currentIndex].totalMs += now - segmentStart;
+                  segmentStart = now;
+                  saveCategories();
+                }
+              }, 30000);
+            }
+          }
+
+          categories.forEach(function (cat, idx) {
+            var option = document.createElement('option');
+            option.value = String(idx);
+            option.textContent = cat.name;
+            categorySelect.appendChild(option);
+          });
+        }
+      }
+      renderTable();
+    })
+    .catch(function (error) {
+      console.error('Firebase load error:', error);
+      updateStatus('Error connecting to Firebase: ' + error.message);
+      renderTable();
+    });
 }
 
 // --- Helpers ---
 
 function formatTime(ms) {
   var totalSeconds = Math.floor(ms / 1000);
-  var hours   = Math.floor(totalSeconds / 3600);
+  var hours = Math.floor(totalSeconds / 3600);
   var minutes = Math.floor((totalSeconds % 3600) / 60);
   var seconds = totalSeconds % 60;
   return (
@@ -83,7 +133,7 @@ function renderTable() {
   emptyMsg.style.display = 'none';
   tableBody.innerHTML = '';
 
-  categories.forEach(function(cat, idx) {
+  categories.forEach(function (cat, idx) {
     var row = document.createElement('tr');
     var displayMs = cat.totalMs + (idx === currentIndex ? liveExtra : 0);
 
@@ -159,7 +209,7 @@ function onSelectCategory() {
   if (!tickInterval) {
     tickInterval = setInterval(renderTable, 1000);
     // Periodically save the in-progress segment so progress is not lost on sudden close
-    setInterval(function() {
+    setInterval(function () {
       if (currentIndex !== -1 && segmentStart !== null) {
         var now = Date.now();
         categories[currentIndex].totalMs += now - segmentStart;
@@ -174,14 +224,14 @@ function onSelectCategory() {
 
 addBtn.addEventListener('click', onAddCategory);
 
-categoryInput.addEventListener('keydown', function(e) {
+categoryInput.addEventListener('keydown', function (e) {
   if (e.key === 'Enter') onAddCategory();
 });
 
 categorySelect.addEventListener('change', onSelectCategory);
 
 // Save current segment progress before page unloads
-window.addEventListener('beforeunload', function() {
+window.addEventListener('beforeunload', function () {
   if (currentIndex !== -1 && segmentStart !== null) {
     var now = Date.now();
     categories[currentIndex].totalMs += now - segmentStart;
