@@ -222,7 +222,7 @@ function onSelectCategory() {
 function updateStatus(msg) {
   if (statusMsg) {
     statusMsg.textContent = msg;
-    statusMsg.style.color = '#e74c3c'; // Red for errors
+    statusMsg.style.color = '#e74c3d'; // Red for errors
   }
 }
 
