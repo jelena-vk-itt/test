@@ -66,7 +66,6 @@ function loadFromFirebase() {
             // Resume tracking from now
             currentIndex = savedIndex;
             segmentStart = now;
-            categorySelect.value = String(savedIndex);
             updateStatus('Resumed timing: ' + categories[currentIndex].name);
 
             // Start live-update ticker
@@ -90,6 +89,12 @@ function loadFromFirebase() {
             option.textContent = cat.name;
             categorySelect.appendChild(option);
           });
+
+          if (currentIndex !== -1) {
+            categorySelect.value = String(currentIndex);
+          } else {
+            categorySelect.selectedIndex = 0;
+          }
         }
       }
       renderTable();
