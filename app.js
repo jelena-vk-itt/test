@@ -17,6 +17,7 @@ var tickInterval = null;    // setInterval handle for live updates
 var categoryInput = document.getElementById('category-input');
 var addBtn = document.getElementById('add-btn');
 var categorySelect = document.getElementById('category-select');
+var statusMsg = document.getElementById('status-msg');
 var tableBody = document.getElementById('table-body');
 var emptyMsg = document.getElementById('empty-msg');
 
@@ -65,7 +66,6 @@ function loadFromFirebase() {
             // Resume tracking from now
             currentIndex = savedIndex;
             segmentStart = now;
-            updateStatus('Resumed timing: ' + categories[currentIndex].name);
 
             // Start live-update ticker
             if (!tickInterval) {
@@ -158,11 +158,6 @@ function renderTable() {
   });
 }
 
-function updateStatus(msg) {
-  // Status messages removed from UI
-  console.log('Status:', msg);
-}
-
 // --- Event handlers ---
 
 function onAddCategory() {
@@ -186,7 +181,7 @@ function onAddCategory() {
   categorySelect.appendChild(option);
 
   categoryInput.value = '';
-  updateStatus('Category "' + name + '" added.');
+  if (statusMsg) statusMsg.textContent = ''; // Clear any previous errors
   saveCategories();
   renderTable();
 }
@@ -206,7 +201,6 @@ function onSelectCategory() {
   currentIndex = selectedIndex;
   segmentStart = now;
 
-  updateStatus('Timing: ' + categories[currentIndex].name);
   saveCategories();
   renderTable();
 
@@ -222,6 +216,13 @@ function onSelectCategory() {
         saveCategories();
       }
     }, 30000);
+  }
+}
+
+function updateStatus(msg) {
+  if (statusMsg) {
+    statusMsg.textContent = msg;
+    statusMsg.style.color = '#e74c3c'; // Red for errors
   }
 }
 
