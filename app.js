@@ -17,7 +17,6 @@ var tickInterval = null;    // setInterval handle for live updates
 var categoryInput = document.getElementById('category-input');
 var addBtn = document.getElementById('add-btn');
 var categorySelect = document.getElementById('category-select');
-var statusMsg = document.getElementById('status-msg');
 var tableBody = document.getElementById('table-body');
 var emptyMsg = document.getElementById('empty-msg');
 
@@ -160,7 +159,8 @@ function renderTable() {
 }
 
 function updateStatus(msg) {
-  statusMsg.textContent = msg;
+  // Status messages removed from UI
+  console.log('Status:', msg);
 }
 
 // --- Event handlers ---
