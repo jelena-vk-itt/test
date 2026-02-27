@@ -161,12 +161,12 @@ function renderTable() {
 // --- Event handlers ---
 
 function onAddCategory() {
-  var name = categoryInput.value.trim();
+  var name = categoryInput.value.trim().toLowerCase();
   if (!name) return;
 
   // Prevent duplicates
   for (var i = 0; i < categories.length; i++) {
-    if (categories[i].name.toLowerCase() === name.toLowerCase()) {
+    if (categories[i].name === name) {
       updateStatus('Category "' + name + '" already exists.');
       return;
     }
